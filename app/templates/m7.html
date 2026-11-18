@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="kpis">
+  <div class="kpi"><b>基准差异</b><strong>1</strong><small>机场</small></div>
+  <div class="kpi"><b>受影响</b><strong>1</strong><small>航段</small></div>
+  <div class="kpi"><b>不受影响</b><strong>2</strong><small>航段</small></div>
+  <div class="kpi"><b>规则版</b><strong>1.7</strong><small>v</small></div>
+</section>
+<div class="grid grid--split">
+  <section class="panel">
+    <div class="panel__head"><h2>基准修正发布</h2><span class="state state--ok">待交接</span></div>
+    <div class="panel__body panel__body--scroll">
+      <table class="ledger"><thead><tr><th>序号</th><th>业务键</th><th>状态</th><th class="num">值</th></tr></thead>
+      <tbody>{% for row in rows %}<tr><td class="num">{{ loop.index }}</td><td>{{ row.key }}</td><td>{{ row.status }}</td><td class="num">{{ row.value }}</td></tr>{% endfor %}</tbody></table>
+    </div>
+  </section>
+  <section class="panel panel--evidence">
+    <div class="panel__head"><h2>证据</h2><span class="panel__meta">7 条</span></div>
+    <div class="panel__body"><div class="evidence"><b>FIX-TZ-2026.10-TZ-2026.11</b><span>SFO</span><code>/api/baseline-fixes</code></div><pre id="result">等待运行</pre></div>
+  </section>
+  <section class="panel panel--status">
+    <div class="panel__head"><h2>原因分布</h2><span class="panel__meta">2 类</span></div>
+    <div class="panel__body"><div class="bar"><i style="width:91%"></i></div><div class="legend"><span>受影响 1</span><span>不受影响 2</span></div></div>
+  </section>
+</div>
+{% endblock %}

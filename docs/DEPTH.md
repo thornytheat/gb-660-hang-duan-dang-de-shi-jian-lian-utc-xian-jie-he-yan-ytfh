@@ -2,7 +2,7 @@
 
 - 规模：中型
 - 核心规则：用机场 IANA 时区解析 DST 重叠与跳时，所有航链在 UTC 上校验先后和衔接。
-- 使用者与工作流：运行数据员导入航段，确认机场时区，处理当地时刻歧义，构建 UTC 航链并核对转机。
+- 使用者与工作流：运行数据员导入航段，确认机场时区，处理当地时刻歧义，构建 UTC 航链并核对转机；基准更正时按批次发布修正并交接影响清单。
 
 ## 功能模块
 
@@ -14,6 +14,7 @@
 | M4 UTC 航链 | 换算航段并校验先后顺序 | POST /api/itineraries/build | `app/modules/m4_itinerary/builder.py` `app/modules/m4_itinerary/validate.py` | `tests/test_m4_itinerary.py` |
 | M5 衔接判定 | 核对航站楼换乘与等待 | POST /api/connections/check | `app/modules/m5_connections/rules.py` `app/modules/m5_connections/windows.py` | `tests/test_m5_connections.py` |
 | M6 批次导出 | 核对航段守恒并导出时刻 | POST /api/reconcile | `app/modules/m6_batches/compare.py` `app/modules/m6_batches/exporter.py` | `tests/test_m6_batches.py` |
+| M7 基准修正发布 | 按版本对发布时区基准更正 | POST /api/baseline-fixes | `app/modules/m7_corrections/service.py` `app/modules/m7_corrections/repository.py` | `tests/test_m7_corrections.py` |
 
 ## 陷阱登记
 
@@ -29,6 +30,19 @@
 | TRAP-14 | 同航段时刻冲突 | 后写覆盖原计划 | 冲突版本进入隔离区 | `app/modules/m1_legs/parser.py` | `tests/test_m1_legs.py::test_conflicting_duplicate_detected` |
 | TRAP-23 | 衔接窗口端点 | 结束时刻被重复计入 | 使用半开区间 | `app/modules/m5_connections/windows.py` | `tests/test_m5_connections.py::test_half_open_window_excludes_end` |
 | TRAP-25 | 时区版本重叠 | 随机选中一版偏移 | 多个生效版本立即拒绝 | `app/modules/m2_airports/registry.py` | `tests/test_m2_airports.py::test_overlapping_timezone_versions_rejected` |
+| TRAP-31 | 基准更正回写历史 | 新表直接覆盖旧偏移，已发排班被悄悄改写 | 基准是不可变快照，按区间生效，旧结论保留原版本 | `app/modules/m2_airports/baselines.py` `app/modules/m4_itinerary/builder.py` | `tests/test_m7_corrections.py::test_new_baseline_only_applies_from_effective_date` |
+| TRAP-32 | 跨日航段用错基准 | 到达用时区当天日期查表，跨日段被算错 | 每个端点按自身当地日期取区间，并记录基准版本与摘要 | `app/modules/m4_itinerary/builder.py` | `tests/test_m7_corrections.py::test_publish_lists_only_affected_legs` |
+| TRAP-33 | 修正重复执行 | 每次重跑都新增一批交接项 | 批次由版本对唯一确定，重复执行复用并列出 ignored | `app/modules/m7_corrections/service.py` | `tests/test_m7_corrections.py::test_repeated_batch_is_idempotent` |
+| TRAP-34 | 修正发布失败 | 半截清单落库、现行基准已推进 | 单事务发布，失败只写审计，旧排班与原基准保持 | `app/modules/m7_corrections/repository.py` | `tests/test_m7_corrections.py::test_failed_publish_writes_no_handover_items` |
+
+## 时区基准修正规则
+
+- 基准是带版本的完整快照；旧结论永远引用发放时的版本，不回写。
+- 新基准按区间生效：历史区间保持原映射，只有落在新区间内的当地时刻会得到不同结论。
+- 一个修正批次 = 一对来源/目标基准；只登记经过两版差异机场的航段与转机。
+- 每条受影响结论同时保存修正前与修正后证据（基准版本、时区、偏移、UTC、等待分钟）。
+- 发布单事务：任一结论算不出来则整批失败，旧版排班与现行基准不动。
+- 从旧结论追证据：`/api/baseline-fixes/history/{leg|connection}/{键}`。
 
 ## 对账规则
 

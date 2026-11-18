@@ -1,4 +1,5 @@
 BASE_MINUTES = {"JFK": 90, "LHR": 75, "PVG": 60, "SFO": 80}
+MAX_WAIT_MINUTES = 720
 
 def required_minutes(airport: str, arrival_terminal: str, departure_terminal: str) -> int:
     if airport not in BASE_MINUTES:

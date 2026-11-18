@@ -27,3 +27,22 @@ def test_export_contains_utc_evidence():
     text = itineraries_csv([{"flight_key": "A", "departure_utc": "2026-01-01T00:00:00Z", "arrival_utc": "2026-01-01T01:00:00Z", "status": "VALID", "reason_code": ""}])
     assert "departure_utc" in text and "VALID" in text
 
+
+def test_export_rows_carry_baseline_and_fix_id():
+    text = itineraries_csv(
+        [
+            {
+                "flight_key": "A",
+                "departure_utc": "2026-01-01T00:00:00Z",
+                "arrival_utc": "2026-01-01T01:00:00Z",
+                "status": "VALID",
+                "reason_code": "",
+                "baseline_version": "TZ-2026.11",
+                "fix_id": "FIX-TZ-2026.10-TZ-2026.11",
+            }
+        ]
+    )
+    header = text.splitlines()[0]
+    assert "baseline_version" in header and "fix_id" in header
+    assert "TZ-2026.11" in text and "FIX-TZ-2026.10-TZ-2026.11" in text
+
